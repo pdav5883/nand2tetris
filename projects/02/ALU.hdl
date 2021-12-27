@@ -68,5 +68,11 @@ CHIP ALU {
     Mux16(a=logposout, b=numposout, sel=f, out=posout);
 
     Not16(in=posout, out=negout);
-    Mux16(a=posout, b=negout, sel=no, out=out);
+    Mux16(a=posout, b=negout, sel=no, out=out, out[15]=ng, out[0..7]=n1, out[8..15]=n2);
+
+    // Zero output bit
+    Or8Way(in=n1, out=zr1);
+    Or8Way(in=n2, out=zr2);
+    Or(a=zr1, b=zr2, out=zr3);
+    Not(in=zr3, out=zr);
 }
