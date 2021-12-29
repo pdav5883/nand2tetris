@@ -16,5 +16,16 @@ CHIP PC {
     OUT out[16];
 
     PARTS:
-    // Put your code here:
+    // load the register if either reset/load/inc
+    Or(a=reset, b=load, out=intload);
+    Or(a=intload, b=inc, out=regload);
+    
+    // Use load input bit to select between increment and input
+    Inc16(in=regout, out=incval);
+    Mux16(a=incval, b=in, sel=load, out=muxout);
+
+    // Use reset bit to select between previous selection and zeros
+    Mux16(a=muxout, b[0..15]=false, sel=reset, out=regin);
+
+    Register(in=regin, load=regload, out=regout, out=out);
 }
