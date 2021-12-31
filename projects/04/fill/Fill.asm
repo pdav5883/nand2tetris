@@ -13,60 +13,40 @@
 
 // Put your code here.
 
-@3
+@8192
 D=A
 @numrows
 M=D
-@white
-M=0
-D=A
-@status
-M=D
-@black
-M=-1
-D=A
-@notstatus
-M=D
 
 (MAINLOOP)
-    // check for keyboard input if none, do nothing
+    // check for keyboard input if none, paint white
     @KBD
     D=M
-    @MAINLOOP
+    @WHITE
     D;JEQ
+    (BLACK)
+        @val
+        M=-1
+	@PAINT
+	0;JMP
+    (WHITE)
+        @val
+	M=0
+	@PAINT
+	0;JMP
 
-    // paint everything
-    @PAINT
-    0;JMP
-    (ENDPAINT)
-    
-    // flip status
-    @FLIPSTATUS
-    0;JMP
-    (ENDFLIPSTATUS)
-
-    @MAINLOOP
-    0;JMP
-
-// paint subroutine
+// paint subroutine -- uses val to set screen rows, end by jumping to main
 (PAINT)
     @i
     M=0
-
-    // val stores the value that we paint each row
-    @notstatus
-    A=M
-    D=M
-    @val
-    M=D
 
     (PLOOP)
         // if i == numrows stop
         @i
         D=M
 	@numrows
-	D=D-M
-        @ENDPAINT
+	D=M-D
+        @MAINLOOP
         D;JEQ
 
         // RAM[SCREEN+i] = val
@@ -79,6 +59,7 @@ M=D
 	@val
 	D=M
 	@R0
+	A=M
 	M=D
 
 	// i++
@@ -88,19 +69,3 @@ M=D
 	@PLOOP
 	0;JMP
 
-// flip status subroutine
-(FLIPSTATUS)
-    @status
-    D=M
-    @R0
-    M=D
-    @notstatus
-    D=M
-    @status
-    M=D
-    @R0
-    D=M
-    @notstatus
-    M=D
-    @ENDFLIPSTATUS
-    0;JMP
