@@ -45,12 +45,12 @@ CHIP CPU {
     // PC(in, load, inc, reset, out);
     
     // mux control bit is the msb of instruction (A vs C instruction)
-    Mux16(a=instruction[0..14], b=aluout, sel=instruction[15], out=aregin);
+    Mux16(a=instruction, b=aluout, sel=instruction[15], out=aregin);
 
     // load the aregister if instruction bit15 = 0 (A instruction) or bit5=1 (A=... C instruction)
     Not(in=instruction[15], out=ni15);
     Or(a=ni15, b=instruction[5], out=aregload);
-    ARegister(in=aregin, load=aregload, out=aregout);
+    ARegister(in=aregin, load=aregload, out=aregout, out[0..14]=addressM);
 
     // load the dregister if instruction bit15=1 (C instruction) and bit4=1 (D=...)
     And(a=instruction[15], b=instruction[4], out=dregload);
@@ -58,3 +58,63 @@ CHIP CPU {
 
     // mux control bit: bit12=0 use areg, bit12=1 use inm
     Mux16(a=aregout, b=inM, sel=instruction[12], out=aluiny);
+
+    // writeM if this is a C instruction (bit15) and M is part of dest (bit3)
+    And(a=instruction[15], b=instruction[3], out=writeM);
+
+    // ALU control bits line up exactly with comp bits in instruction, Dreg is x input, A/M is y input
+    ALU(x=aluinx, y=aluiny, zx=instruction[11], nx=instruction[10], zy=instruction[9],
+                            ny=instruction[8], f=instruction[7], no=instruction[6],
+			    out=aluout, out=outM, zr=aluzr, ng=alung);
+    
+    // reset PC based on signal, load based on jump, increment otherwise
+    PC(in=aregout, load=pcjump, inc=pcinc, reset=reset, out[0..14]=pc);
+
+    // increment if both pcjump and reset are low
+    Or(a=pcjump, b=reset, out=npcinc);
+    Not(in=npcinc, out=pcinc);
+
+    // jump logic cases
+    // i[2] | i[1] | i[0] | zr | ng
+    //   0  |   0  |   1  |  0 |  0 (1)
+    //   0  |   1  |   0  |  1 |  x (2)
+    //   0  |   1  |   1  |  1 o  0 (3)
+    //   1  |   0  |   0  |  0 |  1 (4)
+    //   1  |   0  |   1  |  0 |  x (5)
+    //   1  |   1  |   0  |  1 o  1 (6)
+    //   1  |   1  |   1  |  x |  x (7)
+    // i[2] | i[1] | i[0] | zr | ng
+    
+    Not(in=instruction[0], out=ni0);
+    Not(in=instruction[1], out=ni1);
+    Not(in=instruction[2], out=ni2);
+    Not(in=aluzr, out=naluzr);
+    Not(in=alung, out=nalung);
+
+    //  case1: jgt
+    And(a=ni2, b=ni1, out=j1a); And(a=instruction[0], b=naluzr, out=j1b); And(a=j1a, b=j1b, out=j1c); And(a=nalung, b=j1c, out=j1);
+
+    // case2: jeq
+    And(a=ni2, b=instruction[1], out=j2a); And(a=ni0, b=aluzr, out=j2b); And(a=j2a, b=j2b, out=j2);
+
+    // case3: jge
+    And(a=ni2, b=instruction[1], out=j3a); And(a=instruction[0], b=j3a, out=j3b); Or(a=aluzr, b=nalung, out=j3c); And(a=j3b, b=j3c, out=j3);
+
+    // case4: jlt
+    And(a=instruction[2], b=ni1, out=j4a); And(a=ni0, b=naluzr, out=j4b); And(a=j4a, b=j4b, out=j4c); And(a=alung, b=j4c, out=j4);
+
+    // case5: jne
+    And(a=instruction[2], b=ni1, out=j5a); And(a=instruction[0], b=naluzr, out=j5b); And(a=j5a, b=j5b, out=j5);
+
+    // case6: jle
+    And(a=instruction[2], b=instruction[1], out=j6a); And(a=ni0, b=j6a, out=j6b); Or(a=aluzr, b=alung, out=j6c); And(a=j6b, b=j6c, out=j6);
+
+    // case7: jmp
+    And(a=instruction[2], b=instruction[1], out=j7a); And(a=instruction[0], b=j7a, out=j7);
+
+    // OR everything together
+    Or8Way(in[0]=false, in[1]=j1, in[2]=j2, in[3]=j3, in[4]=j4, in[5]=j5, in[6]=j6, in[7]=j7, out=pcjumpt);
+
+    // only jump if this is a c command
+    And(a=instruction[15], b=pcjumpt, out=pcjump);
+}
