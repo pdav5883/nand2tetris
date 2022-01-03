@@ -24,8 +24,30 @@
 
 CHIP Memory {
     IN in[16], load, address[15];
-    OUT out[16];
+    OUT out[16]; 
 
     PARTS:
-    // Put your code here:
+    // only demux load pin to ram or screen
+    // if bit14 = 0, load RAM, else i/o
+    DMux(in=load, sel=address[14], a=loadram, b=loadio);
+
+    // if bit13 = 0, load screen
+    Not(in=address[13], out=not13);
+    And(a=loadio, b=not13, out=loadscreen);
+
+    // devices
+    RAM16K(in=in, load=loadram, address=address[0..13], out=outram);
+    Screen(in=in, load=loadscreen, address=address[0..12], out=outscreen);
+    Keyboard(out=outkbd);
+
+    // if bit0..12=0, select keyboard, else invalid (all zeros)
+    Or8Way(in=address[0..7], out=selinvalid1);
+    Or8Way(in[0..4]=address[8..12], in[5]=selinvalid1, in[6..7]=false, out=selinvalid);
+    Mux16(a=outkbd, b[0..15]=false, sel=selinvalid, out=outvalidkbd);
+
+    // if bit13=0, select screen, else keyboard
+    Mux16(a=outscreen, b=outvalidkbd, sel=address[13], out=outio);
+
+    // if bit14 = 0, select ram, else i/o
+    Mux16(a=outram, b=outio, sel=address[14], out=out);
 }
