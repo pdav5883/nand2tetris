@@ -39,5 +39,22 @@ CHIP CPU {
         pc[15];          // address of next instruction
 
     PARTS:
-    // Put your code here:
-}
+    // ARegister(in, load, out);
+    // DRegister(in, load, out);
+    // ALU(x, y, zx, nx, zy, ny, f, no, out, zr, ng);
+    // PC(in, load, inc, reset, out);
+    
+    // mux control bit is the msb of instruction (A vs C instruction)
+    Mux16(a=instruction[0..14], b=aluout, sel=instruction[15], out=aregin);
+
+    // load the aregister if instruction bit15 = 0 (A instruction) or bit5=1 (A=... C instruction)
+    Not(in=instruction[15], out=ni15);
+    Or(a=ni15, b=instruction[5], out=aregload);
+    ARegister(in=aregin, load=aregload, out=aregout);
+
+    // load the dregister if instruction bit15=1 (C instruction) and bit4=1 (D=...)
+    And(a=instruction[15], b=instruction[4], out=dregload);
+    DRegister(in=aluout, load=dregload, out=aluinx);
+
+    // mux control bit: bit12=0 use areg, bit12=1 use inm
+    Mux16(a=aregout, b=inM, sel=instruction[12], out=aluiny);
