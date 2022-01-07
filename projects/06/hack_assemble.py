@@ -17,7 +17,9 @@ default_st["THIS"] = 3
 default_st["THAT"] = 4
 
 dest_table = {None:"000", "M":"001", "D":"010", "DM":"011",
-              "A":"100", "AM":"101", "AD":"110", "ADM":"111"}
+              "A":"100", "AM":"101", "AD":"110", "ADM":"111",
+              "MD":"011", "MA":"101", "DA":"110", "AMD":"111",
+              "DAM":"111", "DMA":"111", "MAD":"111", "MDA":"111"}
 comp_table = {"0"  :"0101010",
               "1"  :"0111111",
               "-1" :"0111010",
@@ -75,8 +77,7 @@ def assemble(inpath):
                 st[linedata[1]] = next_ram
                 next_ram += 1
 
-            linedata[0] = "a_instruction"
-            linedata[1] = st[linedata[1]]
+            linedata = "a_instruction", st[linedata[1]]
 
         codelist.append(code(linedata))
 
@@ -146,7 +147,7 @@ def code(linedata):
         return "0" + format(linedata[1], "015b")
 
     elif linedata[0] is "c_instruction":
-        return "111" + comp_table[linedata[2]] + comp_table[linedata[1]] + comp_table[linedata[3]]
+        return "111" + comp_table[linedata[2]] + dest_table[linedata[1]] + jump_table[linedata[3]]
 
 
 if __name__ == "__main__":
